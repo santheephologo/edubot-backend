@@ -63,13 +63,14 @@ class BotController extends Controller
     // Fetch a single bot
     public function fetch($botId)
     {
+
         $bot = $this->botRepo->returnBot($botId);
-        
-        if ($bot) {
-            return response()->json($bot, 200);
-        } else {
-            return response()->json(['message' => 'Bot not found.'], 404);
-        }
+        return response()->json($bot, 200);
+        // if ($bot) {
+        //     return response()->json($bot, 200);
+        // } else {
+        //     return response()->json(['message' => 'Bot not found.'], 404);
+        // }
     }
 
     // Fetch dashboard data

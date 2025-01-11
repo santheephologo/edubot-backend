@@ -31,9 +31,10 @@ Route::prefix('clients')->group(function() {
     Route::post('/login', [ClientController::class, 'login']);
     Route::get('/', [ClientController::class, 'fetchClients']);
     Route::get('/{username}', [ClientController::class, 'returnClient']);
-    Route::get('/{username}/tokens', [ClientController::class, 'returnTokenInfo']);
+    Route::get('/{clientId}/{botId}/tokens', [ClientController::class, 'returnTokenInfo']);
     Route::put('/{clientId}/bot/{botId}/token', [ClientController::class, 'updateBotToken']);
     Route::post('/{clientId}/bot', [ClientController::class, 'addBot']);
+    Route::put('/bot/tokens/update', [ClientController::class, 'updateTokenUsage']);
     Route::delete('/{clientId}/bot/{botId}', [ClientController::class, 'deleteBot']);
     Route::delete('/{clientId}', [ClientController::class, 'deleteClient']);
 });

@@ -7,9 +7,9 @@ use App\Repositories\OpenAIRepoInterface;
 use App\Repositories\OpenAIRepo;
 use App\Repositories\BotRepoInterface;
 use App\Repositories\BotRepo;
-use App\Repositories\ChatInterface;
+use App\Repositories\ChatRepoInterface;
 use App\Repositories\ChatRepo;
-use App\Repositories\ClientInterface;
+use App\Repositories\ClientRepoInterface;
 use App\Repositories\ClientRepo;
 
 class AppServiceProvider extends ServiceProvider

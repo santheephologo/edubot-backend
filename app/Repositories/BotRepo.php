@@ -62,9 +62,11 @@ class BotRepo implements BotRepoInterface
     public function fetchBots()
     {
         try {
+        
             $bots = DB::table('bots')->get();
             $clientBots = DB::table('client_bots')->get();
 
+            //dd($bots);
             $botUserCount = [];
             foreach ($clientBots as $clientBot) {
                 if (isset($botUserCount[$clientBot->bot_id])) {
@@ -73,14 +75,14 @@ class BotRepo implements BotRepoInterface
                     $botUserCount[$clientBot->bot_id] = 1;
                 }
             }
-
+            
             $botList = [];
             foreach ($bots as $bot) {
                 $botJson = (array) $bot;
                 $botJson['no_of_users'] = isset($botUserCount[$bot->id]) ? $botUserCount[$bot->id] : 0;
                 $botList[] = $botJson;
             }
-
+            
             return $botList;
         } catch (\Exception $e) {
             \Log::error("Error fetching bots: " . $e->getMessage());

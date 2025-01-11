@@ -98,15 +98,14 @@ class ClientRepo implements ClientRepoInterface
     }
 
     // Return token information for a client
-    public function returnTokenInfo($username)
+    public function returnTokenInfo($clientId, $botId)
     {
         try {
-            $client = DB::table('clients')->where('username', $username)->first();
-            if ($client) {
+            $tokenInfo = DB::table('client_bots')->where('client_id', (int)($clientId))->where('bot_id', (int)($botId))->first();
+            if ($tokenInfo) {
                 return [
-                    'Allocated tokens' => $client->tkns_remaining + $client->tkn_used,
-                    'Remaining tokens' => $client->tkns_remaining,
-                    'Tokens used' => $client->tkn_used
+                    'remaining_tokens' => $tokenInfo->tkns_remaining,
+                    'used_tokens' => $tokenInfo->tkns_used
                 ];
             }
             return null;
@@ -169,6 +168,35 @@ class ClientRepo implements ClientRepoInterface
             return null;
         } catch (\Exception $e) {
             Log::error('Error in deleteClientBot: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    // update token usage
+    public function updateTokenUsage($clientId, $botId, $tokensUsage)
+    {
+        try {
+            $clientBot = DB::table('client_bots')->where('client_id', $clientId)->where('bot_id', $botId)->first();
+            if ($clientBot) {
+                $newTknsRemaining = $clientBot->tkns_remaining + $tokensUsage;
+                $newTknsUsed = $clientBot->tkns_used - $tokensUsage;
+                if ($newTknsUsed < 0) {
+                    $newTknsUsed = 0;
+                }
+                // Update the client bot record
+                DB::table('client_bots')
+                    ->where('client_id', $clientId)
+                    ->where('bot_id', $botId)
+                    ->update([
+                        'tkns_remaining' => $newTknsRemaining,
+                        'tkns_used' => $newTknsUsed,
+                        // 'updated_at' => now(), // Optionally update the timestamp
+                    ]);
+                return true;
+            }
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Error in token update: ' . $e->getMessage());
             return null;
         }
     }

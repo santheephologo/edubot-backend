@@ -92,12 +92,12 @@ class ClientController extends Controller
     }
 
     // Get token information for a specific client
-    public function returnTokenInfo($username)
+    public function returnTokenInfo($clientId, $botId)
     {
-        $tokenInfo = $this->clientRepo->returnTokenInfo($username);
+        $tokenInfo = $this->clientRepo->returnTokenInfo($clientId, $botId);
 
         if ($tokenInfo) {
-            return response()->json(['token_info' => $tokenInfo], 200);
+            return response()->json($tokenInfo, 200);
         }
 
         return response()->json(['message' => 'Client not found or error retrieving token info'], 404);
@@ -174,5 +174,48 @@ class ClientController extends Controller
         }
 
         return response()->json(['message' => 'Error deleting client'], 500);
+    }
+    /**
+     * Update token usage for a client bot.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateTokenUsage(Request $request)
+    {
+        // Validate input data
+        $validatedData = $request->validate([
+            'client_id' => 'required',
+            'bot_id' => 'required',
+            'token_usage' => 'required',
+        ]);
+
+        $clientId = $validatedData['client_id'];
+        $botId = $validatedData['bot_id'];
+        $tokensUsage = $validatedData['token_usage'];
+
+        try {
+            // Call repository method to handle the operation
+            $result = $this->clientRepo->updateTokenUsage($clientId, $botId, $tokensUsage);
+
+            if ($result) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Token usage updated successfully.',
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Client bot not found or could not be updated.',
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Error in token update: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while updating token usage.',
+            ], 500);
+        }
     }
 }
