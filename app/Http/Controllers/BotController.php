@@ -32,14 +32,15 @@ class BotController extends Controller
     }
 
     // Update a bot
-    public function update(Request $request, $botId)
+    public function update(Request $request)
     {
         $data = $request->validate([
             'name' => 'required|string',
+            'bot_id' => 'required',
             'assistant_id' => 'required|string',
         ]);
 
-        $result = $this->botRepo->updateBot($data['name'], $botId, $data['assistant_id']);
+        $result = $this->botRepo->updateBot($data['name'], $data['bot_id'], $data['assistant_id']);
         
         if ($result) {
             return response()->json(['message' => 'Bot updated successfully.'], 200);
@@ -72,6 +73,19 @@ class BotController extends Controller
         //     return response()->json(['message' => 'Bot not found.'], 404);
         // }
     }
+
+    public function fetchDashboard()
+    {
+
+        $bot = $this->botRepo->fetchDashboard();
+        return response()->json($bot, 200);
+        // if ($bot) {
+        //     return response()->json($bot, 200);
+        // } else {
+        //     return response()->json(['message' => 'Bot not found.'], 404);
+        // }
+    }
+
 
     // Fetch dashboard data
     public function dashboard()

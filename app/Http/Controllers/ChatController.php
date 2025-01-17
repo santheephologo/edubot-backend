@@ -24,7 +24,7 @@ class ChatController extends Controller
         $result = $this->chatRepo->storeMessage($sessionId, $reqMessage, $resMessage);
 
         if ($result) {
-            return response()->json(['success' => true, 'message' => 'Message stored successfully'], 200);
+            return response()->json(['success' => true, 'message' => 'Message stored successfully'], 201);
         }
 
         return response()->json(['success' => false, 'message' => 'Error storing message'], 500);
@@ -35,8 +35,8 @@ class ChatController extends Controller
     {
         $clientId = $request->input('client_id');
         $botId = $request->input('bot_id');
-
-        $sessionId = $this->chatRepo->createNewChat($clientId, $botId);
+        $threadId = $request->input('thread_id');
+        $sessionId = $this->chatRepo->createNewChat($clientId, $botId, $threadId);
 
         if ($sessionId) {
             return response()->json(['success' => true, 'session_id' => $sessionId], 201);
@@ -59,9 +59,9 @@ class ChatController extends Controller
     }
 
     // Get all messages from a specific session
-    public function getMessage(Request $request)
+    public function getMessage($sessionId)
     {
-        $sessionId = $request->input('session_id');
+        //$sessionId = $request->input('session_id');
         $messages = $this->chatRepo->getMessage($sessionId);
 
         if ($messages !== null) {
@@ -72,9 +72,9 @@ class ChatController extends Controller
     }
 
     // List chats based on session ID prefix
-    public function listChats(Request $request)
+    public function listChats($userId, $botId)
     {
-        $sessionIdPrefix = $request->input('session_id_prefix');
+        $sessionIdPrefix = `${userId}_${botId}`;
         $chats = $this->chatRepo->listChats($sessionIdPrefix);
 
         if ($chats !== null) {

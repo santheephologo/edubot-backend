@@ -5,7 +5,7 @@ namespace App\Repositories;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-
+use Carbon\Carbon;
 class ClientRepo implements ClientRepoInterface
 {
     // Register client
@@ -124,7 +124,8 @@ class ClientRepo implements ClientRepoInterface
                 DB::table('client_bots')
                     ->where('client_id', $clientId)
                     ->where('bot_id', $botId)
-                    ->update(['tkns_remaining' => $clientBot->tkns_remaining + $addition]);
+                    ->update(['tkns_remaining' => $clientBot->tkns_remaining + $addition,
+                                'updated_at' => Carbon::now(),]);
 
                 return true;
             }
@@ -136,7 +137,7 @@ class ClientRepo implements ClientRepoInterface
     }
 
     // Add a bot for a client
-    public function addBot($clientId, $botName, $botId, $tknsRemaining, $tknsUsed)
+    public function addBot($clientId, $botId, $botName,  $tknsRemaining, $tknsUsed)
     {
         try {
             DB::table('client_bots')->insert([
@@ -144,7 +145,9 @@ class ClientRepo implements ClientRepoInterface
                 'bot_id' => $botId,
                 'name' => $botName,
                 'tkns_remaining' => $tknsRemaining,
-                'tkns_used' => $tknsUsed
+                'tkns_used' => $tknsUsed,
+                'created_at'=>Carbon::now(),
+                'updated_at'=>Carbon::now(),
             ]);
             return true;
         } catch (\Exception $e) {
@@ -154,23 +157,28 @@ class ClientRepo implements ClientRepoInterface
     }
 
     // Delete a specific client bot
-    public function deleteClientBot($clientId, $botId)
-    {
-        try {
-            $clientBot = DB::table('client_bots')->where('client_id', $clientId)->where('bot_id', $botId)->first();
-            if ($clientBot) {
-                DB::table('client_bots')
-                    ->where('client_id', $clientId)
-                    ->where('bot_id', $botId)
-                    ->delete();
-                return true;
-            }
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Error in deleteClientBot: ' . $e->getMessage());
-            return null;
-        }
+public function deleteClientBot($clientId, $botId)
+{
+    try {
+        Log::info('Attempting to delete bot', [
+            'client_id' => $clientId,
+            'bot_id' => $botId,
+        ]);
+
+        $deleted = DB::table('client_bots')
+            ->where('client_id', $clientId)
+            ->where('bot_id', $botId)
+            ->delete();
+
+        Log::info('Delete result', ['deleted' => $deleted]);
+
+        return $deleted > 0; // Returns true if rows were deleted
+    } catch (\Exception $e) {
+        Log::error('Error in deleteClientBot: ' . $e->getMessage());
+        return false; // Return false on exception
     }
+}
+
 
     // update token usage
     public function updateTokenUsage($clientId, $botId, $tokensUsage)
@@ -178,10 +186,10 @@ class ClientRepo implements ClientRepoInterface
         try {
             $clientBot = DB::table('client_bots')->where('client_id', $clientId)->where('bot_id', $botId)->first();
             if ($clientBot) {
-                $newTknsRemaining = $clientBot->tkns_remaining + $tokensUsage;
-                $newTknsUsed = $clientBot->tkns_used - $tokensUsage;
-                if ($newTknsUsed < 0) {
-                    $newTknsUsed = 0;
+                $newTknsRemaining = $clientBot->tkns_remaining - $tokensUsage;
+                $newTknsUsed = $clientBot->tkns_used + $tokensUsage;
+                if ($newTknsRemaining < 0) {
+                    $newTknsRemaining = 0;
                 }
                 // Update the client bot record
                 DB::table('client_bots')

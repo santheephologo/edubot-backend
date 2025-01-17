@@ -32,27 +32,29 @@ Route::prefix('clients')->group(function() {
     Route::get('/', [ClientController::class, 'fetchClients']);
     Route::get('/{username}', [ClientController::class, 'returnClient']);
     Route::get('/{clientId}/{botId}/tokens', [ClientController::class, 'returnTokenInfo']);
-    Route::put('/{clientId}/bot/{botId}/token', [ClientController::class, 'updateBotToken']);
-    Route::post('/{clientId}/bot', [ClientController::class, 'addBot']);
+    Route::put('/token/add', [ClientController::class, 'updateBotToken']);
+    Route::post('/bot/add', [ClientController::class, 'addBot']);
     Route::put('/bot/tokens/update', [ClientController::class, 'updateTokenUsage']);
-    Route::delete('/{clientId}/bot/{botId}', [ClientController::class, 'deleteBot']);
+    Route::put('/unsubscribe', [ClientController::class, 'deleteBot']);
     Route::delete('/{clientId}', [ClientController::class, 'deleteClient']);
 });
 
 
 Route::prefix('bots')->group(function() {
     Route::post('/register', [BotController::class, 'register']);
-    Route::put('/{botId}/update', [BotController::class, 'update']);
+    Route::put('/update', [BotController::class, 'update']);
     Route::get('/', [BotController::class, 'fetchAll']);
     Route::get('/{botId}', [BotController::class, 'fetch']);
-    Route::get('/dashboard', [BotController::class, 'dashboard']);
+    Route::get('/fetch/db', [BotController::class, 'fetchDashboard']);
     Route::delete('/{botId}', [BotController::class, 'delete']);
 });
 
+Route::prefix('chat')->group(function() {
+    Route::post('/store-message', [ChatController::class, 'storeMessage']);
+    Route::post('/create-new-chat', [ChatController::class, 'createNewChat']);
+    Route::get('/get-thread-id', [ChatController::class, 'getThreadId']);
+    Route::get('/get-message/{sessionId}', [ChatController::class, 'getMessage']);
+    Route::get('/list-chats/{userId}/{botId}', [ChatController::class, 'listChats']);
+});
 
 
-Route::post('/store-message', [ChatController::class, 'storeMessage']);
-Route::post('/create-new-chat', [ChatController::class, 'createNewChat']);
-Route::get('/get-thread-id', [ChatController::class, 'getThreadId']);
-Route::get('/get-message', [ChatController::class, 'getMessage']);
-Route::get('/list-chats', [ChatController::class, 'listChats']);

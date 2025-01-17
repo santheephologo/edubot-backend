@@ -104,17 +104,19 @@ class ClientController extends Controller
     }
 
     // Update token information for a bot
-    public function updateBotToken(Request $request, $clientId, $botId)
+    public function updateBotToken(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'addition' => 'required|integer',
+            'bot_id' => 'required',
+            'client_id' => 'required',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $result = $this->clientRepo->updateClientBotToken($clientId, $botId, $request->addition);
+        $result = $this->clientRepo->updateClientBotToken($request->client_id, $request->bot_id, $request->addition);
 
         if ($result) {
             return response()->json(['message' => 'Bot token updated successfully'], 200);
@@ -124,11 +126,12 @@ class ClientController extends Controller
     }
 
     // Add a new bot to a client
-    public function addBot(Request $request, $clientId)
+    public function addBot(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'client_id' => 'required',
+            'bot_id' => 'required',
             'bot_name' => 'required|string',
-            'bot_id' => 'required|integer',
             'tkns_remaining' => 'required|integer',
             'tkns_used' => 'required|integer',
         ]);
@@ -138,9 +141,9 @@ class ClientController extends Controller
         }
 
         $result = $this->clientRepo->addBot(
-            $clientId, 
-            $request->bot_name, 
+            $request->client_id, 
             $request->bot_id, 
+            $request->bot_name, 
             $request->tkns_remaining, 
             $request->tkns_used
         );
@@ -153,9 +156,17 @@ class ClientController extends Controller
     }
 
     // Delete a client bot
-    public function deleteBot($clientId, $botId)
+    public function deleteBot(Request $request)
     {
-        $result = $this->clientRepo->deleteClientBot($clientId, $botId);
+        $validator = Validator::make($request->all(), [
+            'client_id' => 'required',
+            'bot_id' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+        $result = $this->clientRepo->deleteClientBot($request->client_id, $request->bot_id);
 
         if ($result) {
             return response()->json(['message' => 'Bot deleted successfully'], 200);

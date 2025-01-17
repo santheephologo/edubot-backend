@@ -3,16 +3,15 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Services\OpenAiRepoInterface;
 use Carbon\Carbon;
 
 class ChatRepo implements ChatRepoInterface
 {
-    protected $openaiRepo;
+   
 
-    public function __construct(OpenAiRepoInterface $openaiRepo)
+    public function __construct()
     {
-        $this->openaiRepo = $openaiRepo;
+        //$this->openaiRepo = $openaiRepo;
     }
 
     public function storeMessage($sessionId, $reqMessage, $resMessage)
@@ -20,40 +19,50 @@ class ChatRepo implements ChatRepoInterface
         try {
             // Fetch the chat history using raw DB query
             $chatHistory = DB::table('chat_histories')->where('session_id', $sessionId)->first();
-
+            \Log::info("Current messages for session {$sessionId}: " . $chatHistory->messages);
             if ($chatHistory) {
-                // Retrieve existing messages from the 'messages' column and decode it
+                // Log the current state of messages
+                \Log::info("(2) Current messages for session {$sessionId}: " . $chatHistory->messages);
+
+                // Decode existing messages
                 $messages = json_decode($chatHistory->messages, true);
 
-                // If no messages exist, initialize as an empty array
-                if (!$messages) {
-                    $messages = [];
-                }
+                // If messages is not an array, initialize it
+                // if (!is_array($messages)) {
+                //     $messages = [];
+                //     \Log::info("Messages initialized as empty array for session {$sessionId}");
+                // }
 
-                // Add the new messages to the array
+                // Append new messages
                 $messages[] = ['sender' => 'User', 'message' => $reqMessage];
                 $messages[] = ['sender' => 'Bot', 'message' => $resMessage];
 
-                // Update the messages in the database as a JSON string
-                DB::table('chat_histories')->where('session_id', $sessionId)
+                // Log the new messages array
+                \Log::info("Updated messages for session {$sessionId}: " . json_encode($messages));
+
+                // Update the database
+                DB::table('chat_histories')
+                    ->where('session_id', $sessionId)
                     ->update(['messages' => json_encode($messages)]);
 
-                return $chatHistory;
+                return $messages; // Return updated messages
+            } else {
+                \Log::warning("No chat history found for session {$sessionId}");
+                return null;
             }
-
-            return null;
         } catch (\Exception $e) {
-            \Log::error("Error storing message: " . $e->getMessage());
+            \Log::error("Error storing message for session {$sessionId}: " . $e->getMessage());
             return null;
         }
     }
 
-    public function createNewChat($clientId, $botId)
+
+    public function createNewChat($clientId, $botId, $threadId)
     {
         try {
             $timestamp = Carbon::now()->format('Y-m-d H:i:s');
             $sessionId = "{$clientId}_{$botId}_{$timestamp}";
-            $threadId = $this->openaiRepo->createThread();
+            //$threadId = $this->openaiRepo->createThread();
 
             // Insert new chat history using raw DB query
             DB::table('chat_histories')->insert([
@@ -103,8 +112,8 @@ class ChatRepo implements ChatRepoInterface
             // List all chats for the session ID prefix using raw DB query
             $chats = DB::table('chat_histories')
                 ->where('session_id', 'like', "{$sessionIdPrefix}%")
+                ->orderBy('created_at', 'desc') // Order by `created_at` in descending order
                 ->get();
-
             $result = [];
             foreach ($chats as $chat) {
                 // Decode messages from JSON
@@ -113,7 +122,9 @@ class ChatRepo implements ChatRepoInterface
 
                 $result[] = [
                     'session_id' => $chat->session_id,
-                    'msg' => $lastMessage ? $lastMessage['message'] : null
+                    'thread_id'=> $chat->thread_id,
+                    'msg' => $lastMessage ? $lastMessage['message'] : null,
+                    'created_at' => $chat->created_at,
                 ];
             }
 
