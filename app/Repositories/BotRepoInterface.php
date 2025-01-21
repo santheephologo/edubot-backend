@@ -4,9 +4,9 @@ namespace App\Repositories;
 
 interface BotRepoInterface
 {
-    public function botRegister($name, $assistantId);
+    public function botRegister($name, $assistantId, $defaultTokens);
     
-    public function updateBot($name, $botId, $assistantId);
+    public function updateBot($name, $botId, $assistantId, $defaultTokens);
     
     public function fetchBots();
     
@@ -15,4 +15,10 @@ interface BotRepoInterface
     public function returnBot($botId);
     
     public function deleteBot($botId);
+
+    public function fetchAddons();
+
+    public function updateAddon($addonId, $data);
+
+    public function storeAddon($data);
 }

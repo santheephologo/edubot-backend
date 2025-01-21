@@ -13,7 +13,7 @@ class BotRepo implements BotRepoInterface
     }
 
     // Bot registration
-    public function botRegister($name, $assistantId)
+    public function botRegister($name, $assistantId, $defaultTokens)
     {
         try {
             $existingBot = DB::table('bots')->where('name', $name)->first();
@@ -24,6 +24,7 @@ class BotRepo implements BotRepoInterface
             DB::table('bots')->insert([
                 'name' => $name,
                 'assistant_id' => $assistantId,
+                'default_tokens' => $defaultTokens,
                 'is_active' => true,
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
@@ -37,7 +38,7 @@ class BotRepo implements BotRepoInterface
     }
 
     // Update bot information
-    public function updateBot($name, $botId, $assistantId)
+    public function updateBot($name, $botId, $assistantId, $defaultTokens)
     {
         try {
             $bot = DB::table('bots')->where('id', $botId)->first();
@@ -45,6 +46,7 @@ class BotRepo implements BotRepoInterface
                 DB::table('bots')->where('id', $botId)->update([
                     'name' => $name,
                     'assistant_id' => $assistantId,
+                    'default_tokens' => $defaultTokens,
                     'updated_at' => Carbon::now(),
                 ]);
 
@@ -133,6 +135,69 @@ class BotRepo implements BotRepoInterface
         } catch (\Exception $e) {
             \Log::error("Error deleting bot: " . $e->getMessage());
             return null;
+        }
+    }
+
+    public function fetchAddons()
+    {
+        try {
+            $addons = DB::table('addons')->get();
+            \Log::info('Addons fetched successfully', ['count' => $addons->count()]);
+            return $addons;
+        } catch (\Exception $e) {
+            \Log::error("Error fetching addons : " . $e->getMessage());
+            return null;
+        }
+    }
+
+    // Update addon
+    public function updateAddon($addonId, $data)
+    {
+        try {
+            $addon = DB::table('addons')->where('id', $addonId)->first();
+            if ($addon) {
+                DB::table('addons')->where('id', $addonId)->update($data);
+                \Log::info("Addon updated successfully", ['addonId' => $addonId]);
+                return $data;
+            }
+            return null;
+        } catch (\Exception $e) {
+            \Log::error("Error updating addon: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    // Store addon
+    public function storeAddon($data)
+    {
+        try {
+            $addonId = DB::table('addons')->insertGetId([
+                'tokens' => $data['tokens'],
+                'price' => $data['price'] ?? null,
+                // Add other fields as necessary
+            ]);
+            \Log::info("Addon stored successfully", ['addonId' => $addonId]);
+            return ['id' => $addonId, 'tokens' => $data['tokens'], 'price' => $data['price']];
+        } catch (\Exception $e) {
+            \Log::error("Error storing addon: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    // Delete addon
+    public function deleteAddon($addonId)
+    {
+        try {
+            $addon = DB::table('addons')->where('id', $addonId)->first();
+            if ($addon) {
+                DB::table('addons')->where('id', $addonId)->delete();
+                \Log::info("Addon deleted successfully", ['addonId' => $addonId]);
+                return true;
+            }
+            return false;
+        } catch (\Exception $e) {
+            \Log::error("Error deleting addon: " . $e->getMessage());
+            return false;
         }
     }
 }

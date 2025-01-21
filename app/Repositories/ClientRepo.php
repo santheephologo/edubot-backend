@@ -157,27 +157,27 @@ class ClientRepo implements ClientRepoInterface
     }
 
     // Delete a specific client bot
-public function deleteClientBot($clientId, $botId)
-{
-    try {
-        Log::info('Attempting to delete bot', [
-            'client_id' => $clientId,
-            'bot_id' => $botId,
-        ]);
+    public function deleteClientBot($clientId, $botId)
+    {
+        try {
+            Log::info('Attempting to delete bot', [
+                'client_id' => $clientId,
+                'bot_id' => $botId,
+            ]);
 
-        $deleted = DB::table('client_bots')
-            ->where('client_id', $clientId)
-            ->where('bot_id', $botId)
-            ->delete();
+            $deleted = DB::table('client_bots')
+                ->where('client_id', $clientId)
+                ->where('bot_id', $botId)
+                ->delete();
 
-        Log::info('Delete result', ['deleted' => $deleted]);
+            Log::info('Delete result', ['deleted' => $deleted]);
 
-        return $deleted > 0; // Returns true if rows were deleted
-    } catch (\Exception $e) {
-        Log::error('Error in deleteClientBot: ' . $e->getMessage());
-        return false; // Return false on exception
+            return $deleted > 0; // Returns true if rows were deleted
+        } catch (\Exception $e) {
+            Log::error('Error in deleteClientBot: ' . $e->getMessage());
+            return false; // Return false on exception
+        }
     }
-}
 
 
     // update token usage

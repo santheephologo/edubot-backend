@@ -47,6 +47,10 @@ Route::prefix('bots')->group(function() {
     Route::get('/{botId}', [BotController::class, 'fetch']);
     Route::get('/fetch/db', [BotController::class, 'fetchDashboard']);
     Route::delete('/{botId}', [BotController::class, 'delete']);
+    Route::get('/addons/fetch', [BotController::class, 'fetchAddons']);
+    Route::put('/addons/update', [BotController::class, 'updateAddon']);
+    Route::post('/addons/store', [BotController::class, 'storeAddon']);
+    Route::delete('/addons/delete/{addonId}', [BotController::class, 'deleteAddon']);
 });
 
 Route::prefix('chat')->group(function() {
