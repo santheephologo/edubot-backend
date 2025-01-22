@@ -4,8 +4,14 @@ namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-
+use Illuminate\Support\Str;
+use App\Models\Bot;
+use App\Models\User;
+use App\Models\Addon;
+use App\Models\UserBot;
 class BotRepo implements BotRepoInterface
+
+
 {
     public function __construct()
     {
@@ -16,12 +22,14 @@ class BotRepo implements BotRepoInterface
     public function botRegister($name, $assistantId, $defaultTokens)
     {
         try {
-            $existingBot = DB::table('bots')->where('name', $name)->first();
+            // Check if the bot already exists
+            $existingBot = Bot::where('name', $name)->first();
             if ($existingBot) {
                 return null; // Bot already exists
             }
 
-            DB::table('bots')->insert([
+            // Create the new bot using the Bot model
+            $bot = Bot::create([
                 'name' => $name,
                 'assistant_id' => $assistantId,
                 'default_tokens' => $defaultTokens,
@@ -30,7 +38,7 @@ class BotRepo implements BotRepoInterface
                 'updated_at' => Carbon::now(),
             ]);
 
-            return true;
+            return true; // Bot registered successfully
         } catch (\Exception $e) {
             \Log::error("Error in bot registration: " . $e->getMessage());
             return null;
@@ -41,9 +49,12 @@ class BotRepo implements BotRepoInterface
     public function updateBot($name, $botId, $assistantId, $defaultTokens)
     {
         try {
-            $bot = DB::table('bots')->where('id', $botId)->first();
+            // Find the bot by its ID using the Bot model
+            $bot = Bot::find($botId);
+
             if ($bot) {
-                DB::table('bots')->where('id', $botId)->update([
+                // Update the bot attributes and save it
+                $bot->update([
                     'name' => $name,
                     'assistant_id' => $assistantId,
                     'default_tokens' => $defaultTokens,
@@ -53,38 +64,39 @@ class BotRepo implements BotRepoInterface
                 return true;
             }
 
-            return false;
+            return false; // Bot not found
         } catch (\Exception $e) {
             \Log::error("Error in updating bot: " . $e->getMessage());
-            return null;
+            return null; // Handle any error
         }
     }
+
 
     // Fetch all bots with user count
     public function fetchBots()
     {
         try {
-        
-            $bots = DB::table('bots')->get();
-            $clientBots = DB::table('client_bots')->get();
+            // Fetch all bots with their associated user bot data
+            $bots = Bot::all(); // Retrieve all bots
+            $userBots = UserBot::all(); // Retrieve all user-bot associations
 
-            //dd($bots);
-            $botUserCount = [];
-            foreach ($clientBots as $clientBot) {
-                if (isset($botUserCount[$clientBot->bot_id])) {
-                    $botUserCount[$clientBot->bot_id]++;
-                } else {
-                    $botUserCount[$clientBot->bot_id] = 1;
-                }
-            }
-            
-            $botList = [];
-            foreach ($bots as $bot) {
-                $botJson = (array) $bot;
-                $botJson['no_of_users'] = isset($botUserCount[$bot->id]) ? $botUserCount[$bot->id] : 0;
-                $botList[] = $botJson;
-            }
-            
+            // Count the number of users per bot
+            $botUserCount = $userBots->groupBy('bot_id')->map->count();
+
+            // Prepare the bot list with the user count
+            $botList = $bots->map(function ($bot) use ($botUserCount) {
+                return [
+                    'id' => $bot->id,
+                    'name' => $bot->name,
+                    'assistant_id' => $bot->assistant_id,
+                    'default_tokens' => $bot->default_tokens,
+                    'is_active' => $bot->is_active,
+                    'created_at' => $bot->created_at,
+                    'updated_at' => $bot->updated_at,
+                    'no_of_users' => $botUserCount->get($bot->id, 0), // Default to 0 if no users
+                ];
+            });
+
             return $botList;
         } catch (\Exception $e) {
             \Log::error("Error fetching bots: " . $e->getMessage());
@@ -96,8 +108,9 @@ class BotRepo implements BotRepoInterface
     public function fetchDashboard()
     {
         try {
-            $clientCount = DB::table('clients')->count();
-            $botCount = DB::table('bots')->count();
+            // Fetch counts using Eloquent models
+            $clientCount = User::count();
+            $botCount = Bot::count();
 
             return [
                 'client_count' => $clientCount,
@@ -113,8 +126,11 @@ class BotRepo implements BotRepoInterface
     public function returnBot($botId)
     {
         try {
-            $bot = DB::table('bots')->where('id', $botId)->first();
-            return $bot ? (array) $bot : null;
+            // Fetch the bot using Eloquent
+            $bot = Bot::find($botId);
+
+            // Return the bot as an array if found, otherwise null
+            return $bot ? $bot->toArray() : null;
         } catch (\Exception $e) {
             \Log::error("Error fetching bot: " . $e->getMessage());
             return null;
@@ -125,13 +141,11 @@ class BotRepo implements BotRepoInterface
     public function deleteBot($botId)
     {
         try {
-            $bot = DB::table('bots')->where('id', $botId)->first();
-            if ($bot) {
-                DB::table('bots')->where('id', $botId)->delete();
-                return true;
-            }
+            // Attempt to delete the bot by its ID using Eloquent's destroy method
+            $deleted = Bot::destroy($botId);
 
-            return false;
+            // Return true if the bot was deleted, otherwise false
+            return $deleted > 0;
         } catch (\Exception $e) {
             \Log::error("Error deleting bot: " . $e->getMessage());
             return null;
@@ -141,27 +155,44 @@ class BotRepo implements BotRepoInterface
     public function fetchAddons()
     {
         try {
-            $addons = DB::table('addons')->get();
+            // Retrieve all addons using Eloquent
+            $addons = Addon::all();
+
+            // Log the count of addons fetched
             \Log::info('Addons fetched successfully', ['count' => $addons->count()]);
+
+            // Return the addons collection
             return $addons;
         } catch (\Exception $e) {
-            \Log::error("Error fetching addons : " . $e->getMessage());
+            // Log any errors that occur during the fetch
+            \Log::error("Error fetching addons: " . $e->getMessage());
             return null;
         }
-    }
+    }   
 
     // Update addon
     public function updateAddon($addonId, $data)
     {
         try {
-            $addon = DB::table('addons')->where('id', $addonId)->first();
+            // Retrieve the addon using Eloquent
+            $addon = Addon::find($addonId);
+
+            // Check if the addon exists
             if ($addon) {
-                DB::table('addons')->where('id', $addonId)->update($data);
+                // Update the addon with the provided data
+                $addon->update($data);
+
+                // Log success
                 \Log::info("Addon updated successfully", ['addonId' => $addonId]);
-                return $data;
+
+                // Return the updated data
+                return $addon;
             }
+
+            // Return null if the addon was not found
             return null;
         } catch (\Exception $e) {
+            // Log any errors
             \Log::error("Error updating addon: " . $e->getMessage());
             return null;
         }
@@ -171,14 +202,26 @@ class BotRepo implements BotRepoInterface
     public function storeAddon($data)
     {
         try {
-            $addonId = DB::table('addons')->insertGetId([
+            // Create a new Addon using Eloquent
+            $addon = Addon::create([
                 'tokens' => $data['tokens'],
                 'price' => $data['price'] ?? null,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
                 // Add other fields as necessary
             ]);
-            \Log::info("Addon stored successfully", ['addonId' => $addonId]);
-            return ['id' => $addonId, 'tokens' => $data['tokens'], 'price' => $data['price']];
+
+            // Log the successful creation
+            \Log::info("Addon stored successfully", ['addonId' => $addon->id]);
+
+            // Return the stored addon details
+            return [
+                'id' => $addon->id,
+                'tokens' => $addon->tokens,
+                'price' => $addon->price,
+            ];
         } catch (\Exception $e) {
+            // Log any errors
             \Log::error("Error storing addon: " . $e->getMessage());
             return null;
         }
@@ -188,14 +231,22 @@ class BotRepo implements BotRepoInterface
     public function deleteAddon($addonId)
     {
         try {
-            $addon = DB::table('addons')->where('id', $addonId)->first();
+            // Find the addon by its ID
+            $addon = Addon::find($addonId);
+        
             if ($addon) {
-                DB::table('addons')->where('id', $addonId)->delete();
+                // Delete the addon
+                $addon->delete();
+            
+                // Log the successful deletion
                 \Log::info("Addon deleted successfully", ['addonId' => $addonId]);
+            
                 return true;
             }
+        
             return false;
         } catch (\Exception $e) {
+            // Log any errors
             \Log::error("Error deleting addon: " . $e->getMessage());
             return false;
         }

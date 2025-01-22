@@ -4,7 +4,7 @@ namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-
+use Illuminate\Support\Str;
 class ChatRepo implements ChatRepoInterface
 {
    
@@ -66,6 +66,7 @@ class ChatRepo implements ChatRepoInterface
 
             // Insert new chat history using raw DB query
             DB::table('chat_histories')->insert([
+                'id' => (string) Str::uuid(),
                 'session_id' => $sessionId,
                 'thread_id' => $threadId,
                 'messages' => json_encode([]) // Initialize with empty messages

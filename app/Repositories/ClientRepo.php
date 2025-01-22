@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Repositories;
-
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -31,7 +31,7 @@ class ClientRepo implements ClientRepoInterface
     public function clientLogin($email, $password)
     {
         try {
-            $client = DB::table('clients')->where('email', $email)->first();
+            $client = DB::table('users')->where('email', $email)->first();
 
             if (!$client) {
                 return false;
@@ -52,8 +52,8 @@ class ClientRepo implements ClientRepoInterface
     public function fetchClients()
     {
         try {
-            $clients = DB::table('clients')->get();
-            $clientBots = DB::table('client_bots')->get();
+            $clients = DB::table('users')->get();
+            $clientBots = DB::table('user_bots')->get();
 
             $clientsWithBots = [];
             foreach ($clients as $client) {
@@ -64,7 +64,7 @@ class ClientRepo implements ClientRepoInterface
 
             foreach ($clientBots as $bot) {
                 foreach ($clientsWithBots as &$client) {
-                    if ($bot->client_id == $client['id']) {
+                    if ($bot->user_id == $client['id']) {
                         $client['bots'][] = (array) $bot;
                     }
                 }
@@ -81,7 +81,7 @@ class ClientRepo implements ClientRepoInterface
     public function returnClient($username)
     {
         try {
-            $client = DB::table('clients')->where('username', $username)->first();
+            $client = DB::table('users')->where('username', $username)->first();
             if (!$client) {
                 return null;
             }
@@ -101,11 +101,11 @@ class ClientRepo implements ClientRepoInterface
     public function returnTokenInfo($clientId, $botId)
     {
         try {
-            $tokenInfo = DB::table('client_bots')->where('client_id', (int)($clientId))->where('bot_id', (int)($botId))->first();
+            $tokenInfo = DB::table('user_bots')->where('user_id', (int)($clientId))->where('bot_id', (int)($botId))->first();
             if ($tokenInfo) {
                 return [
-                    'remaining_tokens' => $tokenInfo->tkns_remaining,
-                    'used_tokens' => $tokenInfo->tkns_used
+                    'remaining_tokens' => $tokenInfo->tokens_remaining,
+                    'used_tokens' => $tokenInfo->tokens_used
                 ];
             }
             return null;
@@ -119,12 +119,12 @@ class ClientRepo implements ClientRepoInterface
     public function updateClientBotToken($clientId, $botId, $addition)
     {
         try {
-            $clientBot = DB::table('client_bots')->where('client_id', $clientId)->where('bot_id', $botId)->first();
+            $clientBot = DB::table('user_bots')->where('user_id', $clientId)->where('bot_id', $botId)->first();
             if ($clientBot) {
-                DB::table('client_bots')
-                    ->where('client_id', $clientId)
+                DB::table('user_bots')
+                    ->where('user_id', $clientId)
                     ->where('bot_id', $botId)
-                    ->update(['tkns_remaining' => $clientBot->tkns_remaining + $addition,
+                    ->update(['tokens_remaining' => $clientBot->tokens_remaining + $addition,
                                 'updated_at' => Carbon::now(),]);
 
                 return true;
@@ -140,12 +140,13 @@ class ClientRepo implements ClientRepoInterface
     public function addBot($clientId, $botId, $botName,  $tknsRemaining, $tknsUsed)
     {
         try {
-            DB::table('client_bots')->insert([
-                'client_id' => $clientId,
+            DB::table('user_bots')->insert([
+                'id' => (string) Str::uuid(),
+                'user_id' => $clientId,
                 'bot_id' => $botId,
                 'name' => $botName,
-                'tkns_remaining' => $tknsRemaining,
-                'tkns_used' => $tknsUsed,
+                'tokens_remaining' => $tknsRemaining,
+                'tokens_used' => $tknsUsed,
                 'created_at'=>Carbon::now(),
                 'updated_at'=>Carbon::now(),
             ]);
@@ -161,12 +162,12 @@ class ClientRepo implements ClientRepoInterface
     {
         try {
             Log::info('Attempting to delete bot', [
-                'client_id' => $clientId,
+                'user_id' => $clientId,
                 'bot_id' => $botId,
             ]);
 
-            $deleted = DB::table('client_bots')
-                ->where('client_id', $clientId)
+            $deleted = DB::table('user_bots')
+                ->where('user_id', $clientId)
                 ->where('bot_id', $botId)
                 ->delete();
 
@@ -184,20 +185,20 @@ class ClientRepo implements ClientRepoInterface
     public function updateTokenUsage($clientId, $botId, $tokensUsage)
     {
         try {
-            $clientBot = DB::table('client_bots')->where('client_id', $clientId)->where('bot_id', $botId)->first();
+            $clientBot = DB::table('user_bots')->where('user_id', $clientId)->where('bot_id', $botId)->first();
             if ($clientBot) {
-                $newTknsRemaining = $clientBot->tkns_remaining - $tokensUsage;
-                $newTknsUsed = $clientBot->tkns_used + $tokensUsage;
+                $newTknsRemaining = $clientBot->tokens_remaining - $tokensUsage;
+                $newTknsUsed = $clientBot->tokens_used + $tokensUsage;
                 if ($newTknsRemaining < 0) {
                     $newTknsRemaining = 0;
                 }
                 // Update the client bot record
-                DB::table('client_bots')
-                    ->where('client_id', $clientId)
+                DB::table('user_bots')
+                    ->where('user_id', $clientId)
                     ->where('bot_id', $botId)
                     ->update([
-                        'tkns_remaining' => $newTknsRemaining,
-                        'tkns_used' => $newTknsUsed,
+                        'tokens_remaining' => $newTknsRemaining,
+                        'tokens_used' => $newTknsUsed,
                         // 'updated_at' => now(), // Optionally update the timestamp
                     ]);
                 return true;
@@ -213,9 +214,9 @@ class ClientRepo implements ClientRepoInterface
     public function deleteClient($clientId)
     {
         try {
-            $client = DB::table('clients')->where('id', $clientId)->first();
+            $client = DB::table('users')->where('id', $clientId)->first();
             if ($client) {
-                DB::table('clients')->where('id', $clientId)->delete();
+                DB::table('users')->where('id', $clientId)->delete();
                 return true;
             }
             return null;
